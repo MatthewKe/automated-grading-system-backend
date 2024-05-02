@@ -24,7 +24,9 @@
       "answers": [
         {
           "questionNumber": 1,
-          "correctAnswer": ["A"],
+          "correctAnswer": [
+            "A"
+          ],
           "score": 4
         }
       ]
@@ -37,7 +39,9 @@
       "answers": [
         {
           "questionNumber": 2,
-          "correctAnswer": ["A"],
+          "correctAnswer": [
+            "A"
+          ],
           "score": 4,
           "numOfLines": 10
         }

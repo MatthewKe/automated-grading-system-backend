@@ -6,9 +6,9 @@ import java.util.Map;
 public interface ProduceService {
     public Map<Long, String> getProjectConfigsByUsername(String username);
 
-    public long createProject(String username);
+    public long createProject(String username, long timestamp);
 
-    public boolean commitProject(String username, String projectConfig, long id) throws IOException;
+    public void commitProject(String username, String projectConfig, long projectId, long timestamp) throws IOException;
 
     public String getProjectConfig(long projectId);
 

@@ -1,10 +1,11 @@
 package com.example.automatedgradingsystembackend.controller;
 
 import com.example.automatedgradingsystembackend.model.request.CommitProjectRequestDTO;
-import com.example.automatedgradingsystembackend.model.response.*;
+import com.example.automatedgradingsystembackend.model.response.CreateProjectResponseDTO;
+import com.example.automatedgradingsystembackend.model.response.GetProjectConfigResponseDTO;
+import com.example.automatedgradingsystembackend.model.response.ProduceOverviewResponseDTO;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.ProduceService;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.util.Map;
 
@@ -36,14 +40,20 @@ public class ProduceController {
     public ResponseEntity<ProduceOverviewResponseDTO> overview(HttpServletRequest request) {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
         Map<Long, String> projectConfigs = produceService.getProjectConfigsByUsername(username);
+        for (Map.Entry<Long, String> entry : projectConfigs.entrySet()) {
+            String projectConfig = entry.getValue();
+            if (!isValidJson(projectConfig)) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+        }
         ProduceOverviewResponseDTO produceOverviewResponseDTO = ProduceOverviewResponseDTO.builder().projectConfigs(projectConfigs).build();
         return ResponseEntity.ok(produceOverviewResponseDTO);
     }
 
     @GetMapping("/createProject")
-    public ResponseEntity<CreateProjectResponseDTO> createProject(HttpServletRequest request) {
+    public ResponseEntity<CreateProjectResponseDTO> createProject(HttpServletRequest request, @RequestParam long timestamp) {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
-        long id = produceService.createProject(username);
+        long id = produceService.createProject(username, timestamp);
         CreateProjectResponseDTO createProjectResponseDTO = CreateProjectResponseDTO.builder()
                 .id(id)
                 .build();
@@ -51,14 +61,32 @@ public class ProduceController {
     }
 
 
+    private static boolean isValidJson(String json) {
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+        try {
+            engine.eval("JSON.parse(" + "JSON.stringify(" + json + "));");
+            return true;
+        } catch (ScriptException e) {
+            logger.error("not Valid Json");
+            logger.error(json);
+            logger.error(e.toString());
+            return false;
+        }
+
+    }
+
     @PostMapping("/commitProject")
     public ResponseEntity<Void> commitProject(HttpServletRequest request, @RequestBody CommitProjectRequestDTO commitProjectRequestDTO) throws IOException {
+        logger.debug("commitProject begins");
+        if (!isValidJson(commitProjectRequestDTO.getProjectConfig())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
-        logger.debug(commitProjectRequestDTO.toString());
         if (!produceService.testProjectIdMatchesUser(username, commitProjectRequestDTO.getProjectId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        produceService.commitProject(username, commitProjectRequestDTO.getProjectConfig(), commitProjectRequestDTO.getProjectId());
+        produceService.commitProject(username, commitProjectRequestDTO.getProjectConfig(), commitProjectRequestDTO.getProjectId(), commitProjectRequestDTO.getTimestamp());
+        logger.debug("commitProject ends");
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
@@ -69,6 +97,9 @@ public class ProduceController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         String projectConfig = produceService.getProjectConfig(projectId);
+        if (!isValidJson(projectConfig)) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
         GetProjectConfigResponseDTO getProjectConfigResponseDTO = GetProjectConfigResponseDTO.builder()
                 .projectConfig(projectConfig)
                 .build();
