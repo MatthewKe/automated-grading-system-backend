@@ -4,6 +4,7 @@ import com.example.automatedgradingsystembackend.model.request.CommitProjectRequ
 import com.example.automatedgradingsystembackend.model.response.*;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.ProduceService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ public class ProduceController {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
         logger.debug(commitProjectRequestDTO.toString());
         if (!produceService.testProjectIdMatchesUser(username, commitProjectRequestDTO.getProjectId())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         produceService.commitProject(username, commitProjectRequestDTO.getProjectConfig(), commitProjectRequestDTO.getProjectId());
         return ResponseEntity.status(HttpStatus.OK).build();
@@ -65,7 +66,7 @@ public class ProduceController {
     public ResponseEntity<GetProjectConfigResponseDTO> getProjectConfig(HttpServletRequest request, @RequestParam long projectId) {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
         if (!produceService.testProjectIdMatchesUser(username, projectId)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         String projectConfig = produceService.getProjectConfig(projectId);
         GetProjectConfigResponseDTO getProjectConfigResponseDTO = GetProjectConfigResponseDTO.builder()

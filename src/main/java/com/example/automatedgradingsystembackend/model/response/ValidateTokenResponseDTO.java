@@ -12,5 +12,4 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ValidateTokenResponseDTO {
     private String username;
-    private boolean isValidate;
 }
