@@ -8,7 +8,6 @@ import lombok.*;
 @Builder
 @ToString
 public class CommitProjectRequestDTO {
-
     private long projectId;
     private String projectConfig;
     private long timestamp;

@@ -1,6 +1,7 @@
 package com.example.automatedgradingsystembackend.service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 
 public interface ProduceService {
@@ -13,5 +14,7 @@ public interface ProduceService {
     public String getProjectConfig(long projectId);
 
     public boolean testProjectIdMatchesUser(String username, long projectId);
+
+    public InputStream download(String jwt, long projectId);
 
 }

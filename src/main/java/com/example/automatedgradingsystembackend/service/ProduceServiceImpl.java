@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -121,6 +122,21 @@ public class ProduceServiceImpl implements ProduceService {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public InputStream download(String jwt, long projectId) {
+        ProcessBuilder processBuilder = new ProcessBuilder("node", "node/getPDF.js", jwt, String.valueOf(projectId));
+        Process process = null;
+        try {
+            process = processBuilder.start();
+        } catch (IOException e) {
+            logger.error(e.toString());
+        }
+
+        // 获取Node.js脚本的输出流
+        InputStream inputStream = process.getInputStream();
+        return inputStream;
     }
 
 

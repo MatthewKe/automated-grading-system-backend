@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -25,7 +24,7 @@ public class RedisConfig {
     public RedisMessageListenerContainer keyExpirationListenerContainer(RedisConnectionFactory connectionFactory) {
         RedisMessageListenerContainer listenerContainer = new RedisMessageListenerContainer();
         listenerContainer.setConnectionFactory(connectionFactory);
-        listenerContainer.addMessageListener(new RedisKeyExpirationListener(listenerContainer), new PatternTopic("__keyevent@*:expired"));
+        //listenerContainer.addMessageListener(new RedisKeyExpirationListener(listenerContainer, redisTemplate(connectionFactory)), new PatternTopic("__keyevent@*:expired"));
         return listenerContainer;
     }
 

@@ -12,5 +12,4 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CreateProjectResponseDTO {
     private long id;
-
 }

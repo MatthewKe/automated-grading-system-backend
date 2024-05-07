@@ -1,30 +1,26 @@
 package com.example.automatedgradingsystembackend.redis;
 
 
-import com.example.automatedgradingsystembackend.service.ProduceServiceImpl;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.TimeoutUtils;
 import org.springframework.data.redis.listener.KeyExpirationEventMessageListener;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @Component
 public class RedisKeyExpirationListener extends KeyExpirationEventMessageListener {
 
-    public RedisKeyExpirationListener(RedisMessageListenerContainer listenerContainer) {
+    public RedisKeyExpirationListener(RedisMessageListenerContainer listenerContainer, RedisTemplate<String, ProjectConfigForRedis> redisTemplate) {
         super(listenerContainer);
+        this.redisTemplate = redisTemplate;
     }
 
     @Value("${projects.path}")
@@ -33,16 +29,12 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
     @Value("${redis.timeout}")
     private long timeout;
 
-
-    @Autowired
-    private RedisTemplate<String, ProjectConfigForRedis> redisTemplate;
+    private final RedisTemplate<String, ProjectConfigForRedis> redisTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(RedisKeyExpirationListener.class);
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        logger.debug("key expired");
-        //持久化
         String expiredKey = message.toString();
         if (!expiredKey.startsWith("Time")) {
             return;
@@ -58,8 +50,7 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
             }
             FileUtils.writeStringToFile(file, projectConfig, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            logger.error(String.valueOf(redisTemplate == null));
-            logger.error(e.getMessage());
+            logger.error("Redis operation failed", e);
         }
     }
 }
