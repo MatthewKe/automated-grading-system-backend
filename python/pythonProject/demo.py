@@ -11,7 +11,7 @@ class AnswerAreaContainerSize(Enum):
     Two = (707.638, 989.213)
 
 
-def scan_qr_code(image_path):
+def scan_qr_code():
     # 加载图像
     img = Image.open(image_path)
     # 解码图像中的所有二维码
@@ -85,7 +85,7 @@ def merge_close_contours(contours, close_distance=10):
     return new_contours
 
 
-def get_answer_area_container_size(num_of_answer_area_containers):
+def get_answer_area_container_size():
     answer_area_container_size = (0, 0)
     if num_of_answer_area_containers == 3:
         answer_area_container_size = AnswerAreaContainerSize.Three
@@ -95,33 +95,34 @@ def get_answer_area_container_size(num_of_answer_area_containers):
     return answer_area_container_size
 
 
-def get_answer_area_container(image, thresh, num_of_answer_area_containers):
+def get_answer_area_container_contours():
     # 寻找轮廓
     contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     rect_contours = get_rectangle_contours(contours)
 
-    answer_area_container_size = get_answer_area_container_size(num_of_answer_area_containers)
+    answer_area_container_size = get_answer_area_container_size()
     answer_area_container_width, answer_area_container_height = answer_area_container_size.value
 
-    candidate_answer_area_container_contours = []
+    answer_area_container_contours = []
     for rect in rect_contours:
         height = rect[2][0][1] - rect[0][0][1]
         width = rect[2][0][0] - rect[0][0][0]
         epsilon = 0.5
         if epsilon > (height / width - (answer_area_container_height / answer_area_container_width)) > -epsilon:
             cv.drawContours(image, [rect], -1, (0, 255, 0), 2)  # 绿色，线宽为2
-            candidate_answer_area_container_contours.append(rect)
+            answer_area_container_contours.append(rect)
 
-    candidate_answer_area_container_contours = merge_close_contours(candidate_answer_area_container_contours)
+    answer_area_container_contours = merge_close_contours(answer_area_container_contours)
 
-    candidate_answer_area_container_contours.sort(key=lambda x: cv.arcLength(x, True), reverse=True)
+    answer_area_container_contours.sort(key=lambda x: cv.arcLength(x, True), reverse=True)
 
-    candidate_answer_area_container_contours = candidate_answer_area_container_contours[:num_of_answer_area_containers]
-    
-    for rect in candidate_answer_area_container_contours:
+    answer_area_container_contours = answer_area_container_contours[:num_of_answer_area_containers]
+
+    for rect in answer_area_container_contours:
         cv.drawContours(image, [rect], -1, (0, 0, 255), 4)  # 绿色，线宽为2
 
-    show_image(image)
+    # show_image(image)
+    return answer_area_container_contours
 
 
 def show_image(image):
@@ -137,7 +138,47 @@ def show_image(image):
     cv.destroyAllWindows()
 
 
+def intercepting_the_answer_area():
+    answer_areas = project_config['answerAreas']
+    for answer_area in answer_areas:
+        print(answer_area)
+
+        index_of_sheets_of_answer_area = int(answer_area['indexOfSheets'])
+        index_of_answer_area_containers = int(answer_area['indexOfAnswerAreaContainers'])
+        id_of_answer = answer_area['id']
+        if index_of_sheets_of_answer_area != index_of_sheets:
+            continue
+        answer_area_container_contour = answer_area_container_contours[index_of_answer_area_containers]
+
+        answer_area_container_contour_x, answer_area_container_contour_y, answer_area_container_contour_width, answer_area_container_contour_height = cv.boundingRect(
+            answer_area_container_contour)
+
+        x = answer_area_container_contour_x + answer_area_container_contour_width * answer_area['relativeLeftTopX']
+        y = answer_area_container_contour_y + answer_area_container_contour_height * answer_area['relativeLeftTopY']
+        w = (answer_area['relativeRightBottomX'] - answer_area[
+            'relativeLeftTopX']) * answer_area_container_contour_width
+        h = (answer_area['relativeRightBottomY'] - answer_area[
+            'relativeLeftTopY']) * answer_area_container_contour_height
+
+        answer_area_contour = np.array([
+            [[x, y]],  # 左上角
+            [[x + w, y]],  # 右上角
+            [[x + w, y + h]],  # 右下角
+            [[x, y + h]]  # 左下角
+        ], dtype=np.int32)
+        cv.drawContours(image, [answer_area_contour], -1, (255, 0, 0), 4)
+        # 截取轮廓区域
+
+        cropped_image = image[int(y):int(y + h), int(x):int(x + w)]
+        # 保存截图到本地
+        cv.imwrite(f'{project_config['projectId']}-{student_id}-{id_of_answer}.jpg', cropped_image)
+
+    show_image(image)
+
+
 if __name__ == '__main__':
+    # todo
+    student_id = 201180082
     # 加载图像，并转换为灰度图和二值图
     image_path = 'test.png'
     image = cv.imread(image_path)
@@ -145,12 +186,14 @@ if __name__ == '__main__':
     _, thresh = cv.threshold(gray, 150, 255, cv.THRESH_BINARY)
 
     # 扫描二维码
-    qr_code_info = scan_qr_code(image_path)
+    qr_code_info = scan_qr_code()
 
     project_config_number = qr_code_info.split('-')[0]
-    index_of_sheet = qr_code_info.split('-')[1]
+    index_of_sheets = int(qr_code_info.split('-')[1])
 
     project_config = read_project_config(project_config_number + '.json')
-    num_of_answer_area_containers = project_config['sheets'][int(index_of_sheet)]['numOfAnswerAreaContainers']
+    num_of_answer_area_containers = project_config['sheets'][index_of_sheets]['numOfAnswerAreaContainers']
 
-    get_answer_area_container(image, thresh, num_of_answer_area_containers)
+    answer_area_container_contours = get_answer_area_container_contours()
+    answer_area_container_contours.sort(key=lambda x: x[0][0][0])
+    intercepting_the_answer_area()
