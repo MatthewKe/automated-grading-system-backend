@@ -138,14 +138,11 @@ def show_image(image):
     cv.destroyAllWindows()
 
 
-def intercepting_the_answer_area():
+def intercepting_the_answer():
     answer_areas = project_config['answerAreas']
     for answer_area in answer_areas:
-        print(answer_area)
-
         index_of_sheets_of_answer_area = int(answer_area['indexOfSheets'])
         index_of_answer_area_containers = int(answer_area['indexOfAnswerAreaContainers'])
-        id_of_answer = answer_area['id']
         if index_of_sheets_of_answer_area != index_of_sheets:
             continue
         answer_area_container_contour = answer_area_container_contours[index_of_answer_area_containers]
@@ -153,25 +150,28 @@ def intercepting_the_answer_area():
         answer_area_container_contour_x, answer_area_container_contour_y, answer_area_container_contour_width, answer_area_container_contour_height = cv.boundingRect(
             answer_area_container_contour)
 
-        x = answer_area_container_contour_x + answer_area_container_contour_width * answer_area['relativeLeftTopX']
-        y = answer_area_container_contour_y + answer_area_container_contour_height * answer_area['relativeLeftTopY']
-        w = (answer_area['relativeRightBottomX'] - answer_area[
-            'relativeLeftTopX']) * answer_area_container_contour_width
-        h = (answer_area['relativeRightBottomY'] - answer_area[
-            'relativeLeftTopY']) * answer_area_container_contour_height
+        for answer in answer_area['answers']:
+            question_number = answer['questionNumber']
 
-        answer_area_contour = np.array([
-            [[x, y]],  # 左上角
-            [[x + w, y]],  # 右上角
-            [[x + w, y + h]],  # 右下角
-            [[x, y + h]]  # 左下角
-        ], dtype=np.int32)
-        cv.drawContours(image, [answer_area_contour], -1, (255, 0, 0), 4)
-        # 截取轮廓区域
+            x = answer_area_container_contour_x + answer_area_container_contour_width * answer['relativeLeftTopX']
+            y = answer_area_container_contour_y + answer_area_container_contour_height * answer['relativeLeftTopY']
+            w = (answer['relativeRightBottomX'] - answer[
+                'relativeLeftTopX']) * answer_area_container_contour_width
+            h = (answer['relativeRightBottomY'] - answer[
+                'relativeLeftTopY']) * answer_area_container_contour_height
 
-        cropped_image = image[int(y):int(y + h), int(x):int(x + w)]
-        # 保存截图到本地
-        cv.imwrite(f'{project_config['projectId']}-{student_id}-{id_of_answer}.jpg', cropped_image)
+            answer_contour = np.array([
+                [[x, y]],  # 左上角
+                [[x + w, y]],  # 右上角
+                [[x + w, y + h]],  # 右下角
+                [[x, y + h]]  # 左下角
+            ], dtype=np.int32)
+            cv.drawContours(image, [answer_contour], -1, (255, 0, 0), 4)
+            # 截取轮廓区域
+
+            cropped_image = image[int(y):int(y + h), int(x):int(x + w)]
+            # 保存截图到本地
+            cv.imwrite(f'{project_config['projectId']}-{student_id}-{question_number}.jpg', cropped_image)
 
     show_image(image)
 
@@ -196,4 +196,5 @@ if __name__ == '__main__':
 
     answer_area_container_contours = get_answer_area_container_contours()
     answer_area_container_contours.sort(key=lambda x: x[0][0][0])
-    intercepting_the_answer_area()
+
+    intercepting_the_answer()
