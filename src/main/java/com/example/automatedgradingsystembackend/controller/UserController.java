@@ -1,11 +1,11 @@
 package com.example.automatedgradingsystembackend.controller;
 
-import com.example.automatedgradingsystembackend.repository.UserInfo;
-import com.example.automatedgradingsystembackend.model.request.LoginRequestDTO;
-import com.example.automatedgradingsystembackend.model.request.RegisterRequestDTO;
-import com.example.automatedgradingsystembackend.model.response.LoginResponseDTO;
-import com.example.automatedgradingsystembackend.model.response.RegisterResponseDTO;
-import com.example.automatedgradingsystembackend.model.response.ValidateTokenResponseDTO;
+import com.example.automatedgradingsystembackend.domain.UserInfo;
+import com.example.automatedgradingsystembackend.dto.request.LoginRequestDTO;
+import com.example.automatedgradingsystembackend.dto.request.RegisterRequestDTO;
+import com.example.automatedgradingsystembackend.dto.response.LoginResponseDTO;
+import com.example.automatedgradingsystembackend.dto.response.RegisterResponseDTO;
+import com.example.automatedgradingsystembackend.dto.response.ValidateTokenResponseDTO;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;

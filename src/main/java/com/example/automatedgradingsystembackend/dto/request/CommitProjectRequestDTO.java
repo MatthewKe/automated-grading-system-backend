@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.model.request;
+package com.example.automatedgradingsystembackend.dto.request;
 
 import lombok.*;
 

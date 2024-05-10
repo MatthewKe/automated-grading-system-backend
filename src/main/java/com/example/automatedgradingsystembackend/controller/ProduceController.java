@@ -1,9 +1,9 @@
 package com.example.automatedgradingsystembackend.controller;
 
-import com.example.automatedgradingsystembackend.model.request.CommitProjectRequestDTO;
-import com.example.automatedgradingsystembackend.model.response.CreateProjectResponseDTO;
-import com.example.automatedgradingsystembackend.model.response.GetProjectConfigResponseDTO;
-import com.example.automatedgradingsystembackend.model.response.ProduceOverviewResponseDTO;
+import com.example.automatedgradingsystembackend.dto.request.CommitProjectRequestDTO;
+import com.example.automatedgradingsystembackend.dto.response.CreateProjectResponseDTO;
+import com.example.automatedgradingsystembackend.dto.response.GetProjectConfigResponseDTO;
+import com.example.automatedgradingsystembackend.dto.response.ProduceOverviewResponseDTO;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.ProduceService;
 import jakarta.servlet.http.HttpServletRequest;

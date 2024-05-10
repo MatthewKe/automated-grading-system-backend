@@ -1,6 +1,6 @@
 package com.example.automatedgradingsystembackend.security;
 
-import com.example.automatedgradingsystembackend.service.UserDetailsServiceImpl;
+import com.example.automatedgradingsystembackend.service.impl.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

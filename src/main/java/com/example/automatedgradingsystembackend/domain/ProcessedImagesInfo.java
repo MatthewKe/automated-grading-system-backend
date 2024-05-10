@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.repository;
+package com.example.automatedgradingsystembackend.domain;
 
 import jakarta.persistence.*;
 import lombok.*;

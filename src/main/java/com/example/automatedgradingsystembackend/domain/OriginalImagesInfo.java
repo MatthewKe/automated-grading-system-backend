@@ -1,9 +1,8 @@
-package com.example.automatedgradingsystembackend.repository;
+package com.example.automatedgradingsystembackend.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,8 +27,6 @@ public class OriginalImagesInfo {
 
     private boolean successfulProcess;
 
-    @OneToOne(fetch = FetchType.EAGER)
-    private ProjectInfo projectInfo;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Set<ProcessedImagesInfo> processedImagesInfos = new HashSet<>();

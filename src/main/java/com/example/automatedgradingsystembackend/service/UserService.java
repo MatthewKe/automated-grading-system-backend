@@ -1,7 +1,7 @@
 package com.example.automatedgradingsystembackend.service;
 
-import com.example.automatedgradingsystembackend.repository.UserInfo;
-import com.example.automatedgradingsystembackend.repository.UserRole;
+import com.example.automatedgradingsystembackend.domain.UserInfo;
+import com.example.automatedgradingsystembackend.domain.UserRole;
 
 import java.util.Set;
 

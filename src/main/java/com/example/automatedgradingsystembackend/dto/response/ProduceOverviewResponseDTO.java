@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.model.response;
+package com.example.automatedgradingsystembackend.dto.response;
 
 
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.model.request;
+package com.example.automatedgradingsystembackend.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class RegisterRequestDTO {
+public class LoginRequestDTO {
 
     private String username;
     private String password;

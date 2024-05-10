@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.model.response;
+package com.example.automatedgradingsystembackend.dto.response;
 
 
 import lombok.AllArgsConstructor;
@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ValidateTokenResponseDTO {
-    private String username;
+public class CreateProjectResponseDTO {
+    private long id;
 }

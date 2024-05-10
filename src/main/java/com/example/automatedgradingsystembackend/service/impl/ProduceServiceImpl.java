@@ -1,10 +1,11 @@
-package com.example.automatedgradingsystembackend.service;
+package com.example.automatedgradingsystembackend.service.impl;
 
-import com.example.automatedgradingsystembackend.repository.ProjectInfo;
-import com.example.automatedgradingsystembackend.repository.UserInfo;
+import com.example.automatedgradingsystembackend.domain.ProjectInfo;
+import com.example.automatedgradingsystembackend.domain.UserInfo;
 import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
-import com.example.automatedgradingsystembackend.repository.ProjectRepository;
+import com.example.automatedgradingsystembackend.repository.ProjectInfoRepository;
 import com.example.automatedgradingsystembackend.repository.UserRepository;
+import com.example.automatedgradingsystembackend.service.ProduceService;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ public class ProduceServiceImpl implements ProduceService {
 
 
     @Autowired
-    ProjectRepository projectRepository;
+    ProjectInfoRepository projectInfoRepository;
 
     @Autowired
     UserRepository userRepository;
@@ -50,7 +51,7 @@ public class ProduceServiceImpl implements ProduceService {
     @Override
     public Map<Long, String> getProjectConfigsByUsername(String username) {
         Map<Long, String> projectConfigs = new HashMap<>();
-        List<ProjectInfo> projectInfos = projectRepository.findByUserUsername(username);
+        List<ProjectInfo> projectInfos = projectInfoRepository.findByUserUsername(username);
 
         projectInfos.forEach(projectInfo -> {
             String projectId = String.valueOf(projectInfo.getProjectId());
@@ -67,7 +68,7 @@ public class ProduceServiceImpl implements ProduceService {
         ProjectInfo projectInfo = ProjectInfo.builder()
                 .user(userInfo)
                 .build();
-        projectRepository.save(projectInfo);
+        projectInfoRepository.save(projectInfo);
         long projectId = projectInfo.getProjectId();
 
         String projectConfig = String.format("{\n" +
@@ -117,7 +118,7 @@ public class ProduceServiceImpl implements ProduceService {
 
     @Override
     public boolean testProjectIdMatchesUser(String username, long projectId) {
-        ProjectInfo projectInfo = projectRepository.findByProjectIdAndUserUsername(projectId, username);
+        ProjectInfo projectInfo = projectInfoRepository.findByProjectIdAndUserUsername(projectId, username);
         if (projectInfo == null) {
             return false;
         }

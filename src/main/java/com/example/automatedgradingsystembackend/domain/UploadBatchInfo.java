@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.repository;
+package com.example.automatedgradingsystembackend.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,10 +22,15 @@ public class UploadBatchInfo {
     @Column(name = "timestamp", columnDefinition = "TIMESTAMP")
     private LocalDateTime timestamp;
 
-    private String title;
+    @ManyToOne(fetch = FetchType.EAGER)
+    private ProjectInfo projectInfo;
+
     private int numOfSuccess;
     private int numOfTotal;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Set<OriginalImagesInfo> originalImagesInfos = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    private UserInfo userInfo;
 }

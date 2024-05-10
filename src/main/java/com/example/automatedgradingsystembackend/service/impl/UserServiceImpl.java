@@ -1,8 +1,9 @@
-package com.example.automatedgradingsystembackend.service;
+package com.example.automatedgradingsystembackend.service.impl;
 
-import com.example.automatedgradingsystembackend.repository.UserInfo;
-import com.example.automatedgradingsystembackend.repository.UserRole;
+import com.example.automatedgradingsystembackend.domain.UserInfo;
+import com.example.automatedgradingsystembackend.domain.UserRole;
 import com.example.automatedgradingsystembackend.repository.UserRepository;
+import com.example.automatedgradingsystembackend.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.repository;
+package com.example.automatedgradingsystembackend.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
