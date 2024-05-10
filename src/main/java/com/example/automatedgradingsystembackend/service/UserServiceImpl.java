@@ -1,7 +1,7 @@
 package com.example.automatedgradingsystembackend.service;
 
-import com.example.automatedgradingsystembackend.model.UserInfo;
-import com.example.automatedgradingsystembackend.model.UserRole;
+import com.example.automatedgradingsystembackend.repository.UserInfo;
+import com.example.automatedgradingsystembackend.repository.UserRole;
 import com.example.automatedgradingsystembackend.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

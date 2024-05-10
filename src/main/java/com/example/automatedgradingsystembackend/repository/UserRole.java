@@ -1,4 +1,4 @@
-package com.example.automatedgradingsystembackend.model;
+package com.example.automatedgradingsystembackend.repository;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

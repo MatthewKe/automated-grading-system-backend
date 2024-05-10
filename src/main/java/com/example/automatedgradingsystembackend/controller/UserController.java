@@ -1,6 +1,6 @@
 package com.example.automatedgradingsystembackend.controller;
 
-import com.example.automatedgradingsystembackend.model.UserInfo;
+import com.example.automatedgradingsystembackend.repository.UserInfo;
 import com.example.automatedgradingsystembackend.model.request.LoginRequestDTO;
 import com.example.automatedgradingsystembackend.model.request.RegisterRequestDTO;
 import com.example.automatedgradingsystembackend.model.response.LoginResponseDTO;

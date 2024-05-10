@@ -1,6 +1,5 @@
 package com.example.automatedgradingsystembackend.repository;
 
-import com.example.automatedgradingsystembackend.model.ProjectInfo;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

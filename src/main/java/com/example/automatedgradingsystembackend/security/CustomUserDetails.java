@@ -1,7 +1,7 @@
 package com.example.automatedgradingsystembackend.security;
 
-import com.example.automatedgradingsystembackend.model.UserInfo;
-import com.example.automatedgradingsystembackend.model.UserRole;
+import com.example.automatedgradingsystembackend.repository.UserInfo;
+import com.example.automatedgradingsystembackend.repository.UserRole;
 import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

@@ -1,7 +1,7 @@
 package com.example.automatedgradingsystembackend.service;
 
-import com.example.automatedgradingsystembackend.model.ProjectInfo;
-import com.example.automatedgradingsystembackend.model.UserInfo;
+import com.example.automatedgradingsystembackend.repository.ProjectInfo;
+import com.example.automatedgradingsystembackend.repository.UserInfo;
 import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
 import com.example.automatedgradingsystembackend.repository.ProjectRepository;
 import com.example.automatedgradingsystembackend.repository.UserRepository;

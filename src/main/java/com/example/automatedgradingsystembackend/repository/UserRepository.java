@@ -1,6 +1,5 @@
 package com.example.automatedgradingsystembackend.repository;
 
-import com.example.automatedgradingsystembackend.model.UserInfo;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
