@@ -1,5 +1,6 @@
-package com.example.automatedgradingsystembackend.redis;
+package com.example.automatedgradingsystembackend.config;
 
+import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

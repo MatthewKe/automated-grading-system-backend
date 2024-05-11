@@ -30,7 +30,6 @@ public class GradeController {
             logger.error("An error occurred: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
         return ResponseEntity.ok().build();
     }
 }

@@ -11,6 +11,8 @@ import com.example.automatedgradingsystembackend.service.GradeService;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +34,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 @Service
 public class GradeServiceImpl implements GradeService {
 
@@ -40,6 +44,8 @@ public class GradeServiceImpl implements GradeService {
     OriginalImagesInfoRepository originalImagesInfoRepository;
     @Autowired
     ProjectInfoRepository projectInfoRepository;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(GradeServiceImpl.class);
 
@@ -86,7 +92,7 @@ public class GradeServiceImpl implements GradeService {
                 loadProjectInfoUnUploadBatchSuccess = loadProjectInfoInUploadBatch(path, uploadBatchInfo);
             }
         }
-        handleImages(uploadBatchInfo);
+        rabbitTemplate.convertAndSend("uploadBatchInfo", uploadBatchInfo.getBatchNumber());
     }
 
     private boolean loadProjectInfoInUploadBatch(Path path, UploadBatchInfo uploadBatchInfo) {
@@ -110,7 +116,10 @@ public class GradeServiceImpl implements GradeService {
         return true;
     }
 
-    private void handleImages(UploadBatchInfo uploadBatchInfo) {
+    @RabbitListener(queues = "uploadBatchInfo")
+    private void handleImages(long batchNumber) {
+        logger.info("handleImages start");
+        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findUploadBatchInfoByBatchNumber(batchNumber);
         Set<OriginalImagesInfo> originalImagesInfos = uploadBatchInfo.getOriginalImagesInfos();
         ProjectInfo uploadBatchProjectInfo = uploadBatchInfo.getProjectInfo();
         originalImagesInfos.forEach(originalImagesInfo -> {
@@ -118,14 +127,22 @@ public class GradeServiceImpl implements GradeService {
                 long indexOfSheets = parsingQRCode(originalImagesInfo, uploadBatchProjectInfo);
                 loadStudentInfoInOriginalImages(originalImagesInfo);
                 cuttingImages(originalImagesInfo, uploadBatchProjectInfo, indexOfSheets, uploadBatchInfo);
+                scoreImages(originalImagesInfo);
                 originalImagesInfo.setSuccessfulProcess(true);
-                
             } catch (HandleImagesException exception) {
                 originalImagesInfo.setSuccessfulProcess(false);
                 originalImagesInfo.setFailedReason(exception.getMessage());
                 logger.error(exception.getMessage());
             }
             originalImagesInfoRepository.save(originalImagesInfo);
+        });
+    }
+
+    private void scoreImages(OriginalImagesInfo originalImagesInfo) {
+        Set<ProcessedImagesInfo> processedImagesInfos = originalImagesInfo.getProcessedImagesInfos();
+        //todo
+        processedImagesInfos.forEach(processedImagesInfo -> {
+            processedImagesInfo.setScore(new BigDecimal(10));
         });
     }
 

@@ -20,10 +20,9 @@ public class ProcessedImagesInfo {
     private long processedImagesInfoId;
 
     private String path;
-    
+
 
     private BigDecimal score;
 
-    @Column(scale = 2)
     private int answerNumber;
 }

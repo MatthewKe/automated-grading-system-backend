@@ -1,5 +1,9 @@
-package com.example.automatedgradingsystembackend.security;
+package com.example.automatedgradingsystembackend.config;
 
+import com.example.automatedgradingsystembackend.security.ExcludePathRequestMatcher;
+import com.example.automatedgradingsystembackend.security.JwtAuthFilter;
+import com.example.automatedgradingsystembackend.security.JwtAuthenticationEntryPoint;
+import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.impl.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
