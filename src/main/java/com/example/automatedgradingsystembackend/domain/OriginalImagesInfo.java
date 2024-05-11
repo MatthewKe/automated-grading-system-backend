@@ -27,6 +27,7 @@ public class OriginalImagesInfo {
 
     private boolean successfulProcess;
 
+    private String failedReason;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Set<ProcessedImagesInfo> processedImagesInfos = new HashSet<>();

@@ -1,8 +1,5 @@
-import json
 import sys
 from enum import Enum
-import cv2 as cv
-import numpy as np
 from pyzbar.pyzbar import decode
 from PIL import Image
 

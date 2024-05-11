@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 from enum import Enum
 import cv2 as cv
 import numpy as np
@@ -9,17 +11,6 @@ from PIL import Image
 class AnswerAreaContainerSize(Enum):
     Three = (458.825, 989.213)
     Two = (707.638, 989.213)
-
-
-def scan_qr_code():
-    # 加载图像
-    img = Image.open(image_path)
-    # 解码图像中的所有二维码
-    qr_codes = decode(img)
-    # 遍历所有解码的二维码
-    # 返回第一个二维码
-    print(f"Decoded QR code data: {qr_codes[0].data.decode('utf-8')}")
-    return qr_codes[0].data.decode('utf-8')
 
 
 def read_project_config(file_path):
@@ -85,7 +76,7 @@ def merge_close_contours(contours, close_distance=10):
     return new_contours
 
 
-def get_answer_area_container_size():
+def get_answer_area_container_size(num_of_answer_area_containers):
     answer_area_container_size = (0, 0)
     if num_of_answer_area_containers == 3:
         answer_area_container_size = AnswerAreaContainerSize.Three
@@ -95,12 +86,12 @@ def get_answer_area_container_size():
     return answer_area_container_size
 
 
-def get_answer_area_container_contours():
+def get_answer_area_container_contours(thresh, num_of_answer_area_containers, image):
     # 寻找轮廓
     contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     rect_contours = get_rectangle_contours(contours)
 
-    answer_area_container_size = get_answer_area_container_size()
+    answer_area_container_size = get_answer_area_container_size(num_of_answer_area_containers)
     answer_area_container_width, answer_area_container_height = answer_area_container_size.value
 
     answer_area_container_contours = []
@@ -121,25 +112,13 @@ def get_answer_area_container_contours():
     for rect in answer_area_container_contours:
         cv.drawContours(image, [rect], -1, (0, 0, 255), 4)  # 绿色，线宽为2
 
-    # show_image(image)
     return answer_area_container_contours
 
 
-def show_image(image):
-    # 创建一个可调整大小的窗口
-    cv.namedWindow('Contours', cv.WINDOW_NORMAL)
-
-    # 设置窗口的大小
-    cv.resizeWindow('Contours', 1200, 1600)  # 设置窗口大小为 600x600 像素
-
-    # 显示图像
-    cv.imshow('Contours', image)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
-
-
-def intercepting_the_answer():
+def intercepting_the_answer(project_config, index_of_sheets, answer_area_container_contours, image,
+                            processed_images_path):
     answer_areas = project_config['answerAreas']
+    question_number_arr = []
     for answer_area in answer_areas:
         index_of_sheets_of_answer_area = int(answer_area['indexOfSheets'])
         index_of_answer_area_containers = int(answer_area['indexOfAnswerAreaContainers'])
@@ -171,30 +150,53 @@ def intercepting_the_answer():
 
             cropped_image = image[int(y):int(y + h), int(x):int(x + w)]
             # 保存截图到本地
-            cv.imwrite(f'{project_config['projectId']}-{student_id}-{question_number}.jpg', cropped_image)
+            # 假设 processed_images_path 和 question_number 已经定义
+            output_directory = f'{processed_images_path}'
+            output_file = f'{output_directory}/{question_number}.png'
 
-    show_image(image)
+            # 检查目录是否存在，如果不存在则创建
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
+            cv.imwrite(output_file, cropped_image)
+
+            question_number_arr.append(question_number)
+
+    print(question_number_arr)
 
 
-if __name__ == '__main__':
-    # todo
-    student_id = 201180082
+def main():
+    project_config_path = sys.argv[1]
+    index_of_sheets = int(sys.argv[2])
+    image_path = sys.argv[3]
+    processed_images_path = sys.argv[4]
+
     # 加载图像，并转换为灰度图和二值图
-    image_path = 'test.png'
     image = cv.imread(image_path)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     _, thresh = cv.threshold(gray, 150, 255, cv.THRESH_BINARY)
 
-    # 扫描二维码
-    qr_code_info = scan_qr_code()
-
-    project_config_number = qr_code_info.split('-')[0]
-    index_of_sheets = int(qr_code_info.split('-')[1])
-
-    project_config = read_project_config(project_config_number + '.json')
+    project_config = read_project_config(project_config_path)
     num_of_answer_area_containers = project_config['sheets'][index_of_sheets]['numOfAnswerAreaContainers']
 
-    answer_area_container_contours = get_answer_area_container_contours()
+    answer_area_container_contours = get_answer_area_container_contours(thresh, num_of_answer_area_containers, image)
     answer_area_container_contours.sort(key=lambda x: x[0][0][0])
 
-    intercepting_the_answer()
+    intercepting_the_answer(project_config, index_of_sheets, answer_area_container_contours, image,
+                            processed_images_path)
+
+
+def show_image(image):
+    # 创建一个可调整大小的窗口
+    cv.namedWindow('Contours', cv.WINDOW_NORMAL)
+
+    # 设置窗口的大小
+    cv.resizeWindow('Contours', 1200, 1600)  # 设置窗口大小为 600x600 像素
+
+    # 显示图像
+    cv.imshow('Contours', image)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()

@@ -20,9 +20,7 @@ public class ProcessedImagesInfo {
     private long processedImagesInfoId;
 
     private String path;
-
-    @OneToOne(fetch = FetchType.EAGER)
-    private ProjectInfo projectInfo;
+    
 
     private BigDecimal score;
 
