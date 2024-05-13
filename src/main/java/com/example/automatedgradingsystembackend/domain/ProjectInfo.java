@@ -21,5 +21,7 @@ public class ProjectInfo {
     @ManyToOne(fetch = FetchType.EAGER)
     private UserInfo user;
 
+    private String path;
+
 
 }

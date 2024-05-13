@@ -28,6 +28,8 @@ public class UploadBatchInfo {
     private int numOfSuccess;
     private int numOfTotal;
 
+    private String state;
+
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Set<OriginalImagesInfo> originalImagesInfos = new HashSet<>();
 

@@ -70,7 +70,9 @@ public class ProduceServiceImpl implements ProduceService {
                 .build();
         projectInfoRepository.save(projectInfo);
         long projectId = projectInfo.getProjectId();
-
+        String projectPath = projectsPath.concat(String.valueOf(projectId)).concat(".json");
+        projectInfo.setPath(projectPath);
+        projectInfoRepository.save(projectInfo);
         String projectConfig = String.format("{\n" +
                 "  \"projectId\": %d,\n" +
                 "  \"title\": \"答题卡（点击我修改）\",\n" +
@@ -91,7 +93,7 @@ public class ProduceServiceImpl implements ProduceService {
                 "  \"defaultFontWidth\": 6.5,\n" +
                 "  \"answerAreas\": []\n" +
                 "}", projectId);
-        String projectPath = projectsPath.concat(String.valueOf(projectId)).concat(".json");
+
         File file = new File(projectPath);
         try {
             file.createNewFile();
@@ -162,7 +164,8 @@ public class ProduceServiceImpl implements ProduceService {
         if (projectConfigForRedis != null) {
             return projectConfigForRedis.getProjectConfig();
         }
-        String projectPath = projectsPath.concat(projectConfigId).concat(".json");
+        ProjectInfo projectInfo = projectInfoRepository.findByProjectId(Long.valueOf(projectConfigId));
+        String projectPath = projectInfo.getPath();
         String projectConfig = null;
         try {
             projectConfig = FileUtils.readFileToString(new File(projectPath), StandardCharsets.UTF_8);

@@ -1,9 +1,11 @@
 package com.example.automatedgradingsystembackend.redis;
 
 
+import com.example.automatedgradingsystembackend.repository.ProjectInfoRepository;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,8 +25,9 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
         this.redisTemplate = redisTemplate;
     }
 
-    @Value("${projects.path}")
-    String projectsPath;
+  
+    @Autowired
+    ProjectInfoRepository projectInfoRepository;
 
     @Value("${redis.timeout}")
     private long timeout;
@@ -43,7 +46,7 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
         try {
             redisTemplate.opsForValue().set(expiredKey, ProjectConfigForRedis.builder().build(), timeout, TimeUnit.SECONDS);
             String projectConfig = redisTemplate.opsForValue().get(projectId).getProjectConfig();
-            String projectPath = projectsPath.concat(projectId).concat(".json");
+            String projectPath = projectInfoRepository.findByProjectId(Long.valueOf(projectId)).getPath();
             File file = new File(projectPath);
             if (!file.exists()) {
                 file.createNewFile();
