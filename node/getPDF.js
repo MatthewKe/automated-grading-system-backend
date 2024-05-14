@@ -22,7 +22,7 @@ async function getPDF(url, projectId, jwtToken) {
 
     await page.goto(produceUrl + projectId, {waitUntil: 'networkidle0'});
 
-    await page.setViewport({width: 1920, height: 1080, deviceScaleFactor: 10});  // deviceScaleFactor 提高像素密度
+    await page.setViewport({width: 1920, height: 1080, deviceScaleFactor: 5});  // deviceScaleFactor 提高像素密度
     await page.waitForSelector('.sheet', {visible: true});
     const elements = await page.$$('.sheet');
     await new Promise(r => setTimeout(r, 1000))

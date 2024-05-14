@@ -14,7 +14,7 @@ import java.util.Set;
 @ToString
 @Table(name = "ORIGINAL_IMAGES_INFO")
 @Builder
-public class OriginalImagesInfo {
+public class OriginalImageInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long originalImagesInfoId;
@@ -30,5 +30,5 @@ public class OriginalImagesInfo {
     private String failedReason;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private Set<ProcessedImagesInfo> processedImagesInfos = new HashSet<>();
+    private Set<ProcessedImageInfo> processedImageInfos = new HashSet<>();
 }

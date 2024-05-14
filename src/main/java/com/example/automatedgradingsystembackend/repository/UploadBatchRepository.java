@@ -14,4 +14,6 @@ public interface UploadBatchRepository extends CrudRepository<UploadBatchInfo, L
     List<UploadBatchInfo> findByUserInfo(UserInfo userInfo);
 
     UploadBatchInfo findByBatchNumber(long batchNumber);
+
+
 }

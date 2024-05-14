@@ -100,7 +100,7 @@ def get_answer_area_container_contours(thresh, num_of_answer_area_containers, im
         width = rect[2][0][0] - rect[0][0][0]
         epsilon = 0.5
         if epsilon > (height / width - (answer_area_container_height / answer_area_container_width)) > -epsilon:
-            cv.drawContours(image, [rect], -1, (0, 255, 0), 2)  # 绿色，线宽为2
+            # cv.drawContours(image, [rect], -1, (0, 255, 0), 2)
             answer_area_container_contours.append(rect)
 
     answer_area_container_contours = merge_close_contours(answer_area_container_contours)
@@ -109,8 +109,8 @@ def get_answer_area_container_contours(thresh, num_of_answer_area_containers, im
 
     answer_area_container_contours = answer_area_container_contours[:num_of_answer_area_containers]
 
-    for rect in answer_area_container_contours:
-        cv.drawContours(image, [rect], -1, (0, 0, 255), 4)  # 绿色，线宽为2
+    # for rect in answer_area_container_contours:
+    #     cv.drawContours(image, [rect], -1, (0, 0, 255), 4)
 
     return answer_area_container_contours
 
@@ -145,7 +145,7 @@ def intercepting_the_answer(project_config, index_of_sheets, answer_area_contain
                 [[x + w, y + h]],  # 右下角
                 [[x, y + h]]  # 左下角
             ], dtype=np.int32)
-            cv.drawContours(image, [answer_contour], -1, (255, 0, 0), 4)
+            # cv.drawContours(image, [answer_contour], -1, (255, 0, 0), 4)
             # 截取轮廓区域
 
             cropped_image = image[int(y):int(y + h), int(x):int(x + w)]

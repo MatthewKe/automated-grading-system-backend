@@ -2,11 +2,9 @@ package com.example.automatedgradingsystembackend.service.impl;
 
 import com.example.automatedgradingsystembackend.domain.*;
 import com.example.automatedgradingsystembackend.dto.response.GetBatchGradeInfoResponseDTO;
+import com.example.automatedgradingsystembackend.dto.response.GetStudentGradeInfoResponseDTO;
 import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
-import com.example.automatedgradingsystembackend.repository.OriginalImagesInfoRepository;
-import com.example.automatedgradingsystembackend.repository.ProjectInfoRepository;
-import com.example.automatedgradingsystembackend.repository.UploadBatchRepository;
-import com.example.automatedgradingsystembackend.repository.UserRepository;
+import com.example.automatedgradingsystembackend.repository.*;
 import com.example.automatedgradingsystembackend.service.GradeService;
 import com.example.automatedgradingsystembackend.vo.GradeOverviewVo;
 import com.example.automatedgradingsystembackend.vo.StudentGradeInfoVO;
@@ -20,6 +18,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,11 +29,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -47,11 +48,13 @@ public class GradeServiceImpl implements GradeService {
     @Autowired
     UploadBatchRepository uploadBatchRepository;
     @Autowired
-    OriginalImagesInfoRepository originalImagesInfoRepository;
+    OriginalImageInfoRepository originalImageInfoRepository;
     @Autowired
     ProjectInfoRepository projectInfoRepository;
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    ProcessedImageInfoRepository processedImageInfoRepository;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -79,27 +82,27 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     public void uploadMultipleFiles(MultipartFile[] files, String username) {
-        Set<OriginalImagesInfo> originalImagesInfos = HashSet.newHashSet(files.length);
+        Set<OriginalImageInfo> originalImageInfos = HashSet.newHashSet(files.length);
         for (MultipartFile _ : files) {
-            originalImagesInfos.add(new OriginalImagesInfo());
+            originalImageInfos.add(new OriginalImageInfo());
         }
         UserInfo userInfo = userRepository.findByUsername(username);
         UploadBatchInfo uploadBatchInfo = UploadBatchInfo.builder()
-                .timestamp(LocalDateTime.now())
-                .originalImagesInfos(originalImagesInfos)
+                .timestamp(ZonedDateTime.now().toLocalDateTime())
+                .originalImageInfos(originalImageInfos)
                 .state("正在批改")
                 .userInfo(userInfo)
                 .build();
         uploadBatchInfo = uploadBatchRepository.save(uploadBatchInfo);
-        List<OriginalImagesInfo> originalImagesInfoArr = uploadBatchInfo.getOriginalImagesInfos().stream().toList();
+        List<OriginalImageInfo> originalImageInfoArr = uploadBatchInfo.getOriginalImageInfos().stream().toList();
 
         boolean loadProjectInfoUnUploadBatchSuccess = false;
         for (int i = 0; i < files.length; i++) {
             MultipartFile file = files[i];
-            OriginalImagesInfo originalImagesInfo = originalImagesInfoArr.get(i);
-            Path path = Paths.get(originalImagesPath, STR."\{uploadBatchInfo.getBatchNumber()}", STR."\{originalImagesInfo.getOriginalImagesInfoId()}.png");
-            originalImagesInfo.setPath(path.toString());
-            originalImagesInfoRepository.save(originalImagesInfo);
+            OriginalImageInfo originalImageInfo = originalImageInfoArr.get(i);
+            Path path = Paths.get(originalImagesPath, STR."\{uploadBatchInfo.getBatchNumber()}", STR."\{originalImageInfo.getOriginalImagesInfoId()}.png");
+            originalImageInfo.setPath(path.toString());
+            originalImageInfoRepository.save(originalImageInfo);
             saveOriginalImages(file, path);
             if (!loadProjectInfoUnUploadBatchSuccess) {
                 loadProjectInfoUnUploadBatchSuccess = loadProjectInfoInUploadBatch(path, uploadBatchInfo);
@@ -134,8 +137,8 @@ public class GradeServiceImpl implements GradeService {
 
         UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
 
-        Map<String, List<OriginalImagesInfo>> originalImagesInfosMapByStudentId =
-                uploadBatchInfo.getOriginalImagesInfos().stream().collect(Collectors.groupingBy(OriginalImagesInfo::getStudentId));
+        Map<String, List<OriginalImageInfo>> originalImagesInfosMapByStudentId =
+                uploadBatchInfo.getOriginalImageInfos().stream().collect(Collectors.groupingBy(OriginalImageInfo::getStudentId));
 
         originalImagesInfosMapByStudentId.forEach((studentId, originalImagesInfos) -> {
 
@@ -146,10 +149,10 @@ public class GradeServiceImpl implements GradeService {
             studentGradeInfoVOS.add(studentGradeInfoVO);
 
             Map<Integer, BigDecimal> scores = originalImagesInfos.stream()
-                    .flatMap(originalImagesInfo -> originalImagesInfo.getProcessedImagesInfos().stream())
+                    .flatMap(originalImageInfo -> originalImageInfo.getProcessedImageInfos().stream())
                     .collect(Collectors.toMap(
-                            ProcessedImagesInfo::getAnswerNumber,
-                            ProcessedImagesInfo::getScore
+                            ProcessedImageInfo::getAnswerNumber,
+                            ProcessedImageInfo::getScore
                     ));
             BigDecimal scoreAddUp = scores.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
             studentGradeInfoVO.setScores(scores);
@@ -166,6 +169,7 @@ public class GradeServiceImpl implements GradeService {
             for (int i = 1; i < maxQuestionNumber; i++) {
                 if (!set.contains(i)) {
                     studentGradeInfoVO.setIfComplete("缺项");
+                    break;
                 }
             }
         });
@@ -176,6 +180,95 @@ public class GradeServiceImpl implements GradeService {
                 .maxAnswerNumber(maxQuestionNumber)
                 .build();
         return getBatchGradeInfoResponseDTO;
+    }
+
+    @Override
+    public GetStudentGradeInfoResponseDTO getStudentGradeInfo(long batchNumber, String studentId) {
+        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
+
+        List<OriginalImageInfo> originalImageInfos =
+                uploadBatchInfo.getOriginalImageInfos().stream().collect(Collectors.groupingBy(OriginalImageInfo::getStudentId)).get(studentId);
+
+        Map<Integer, BigDecimal> scores = originalImageInfos.stream()
+                .flatMap(originalImageInfo -> originalImageInfo.getProcessedImageInfos().stream())
+                .collect(Collectors.toMap(
+                        ProcessedImageInfo::getAnswerNumber,
+                        ProcessedImageInfo::getScore
+                ));
+
+        BigDecimal scoreAddUp = scores.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        StudentGradeInfoVO studentGradeInfoVO = StudentGradeInfoVO.builder()
+                .studentId(originalImageInfos.getFirst().getStudentId())
+                .studentName(originalImageInfos.getFirst().getStudentName())
+                .scores(scores)
+                .scoreAddUp(scoreAddUp)
+                .build();
+
+        int maxQuestionNumber = getMaxQuestionNumber(uploadBatchInfo.getProjectInfo());
+
+        studentGradeInfoVO.setIfComplete("完整");
+        Set<Integer> answerNumbers = scores.keySet();
+        for (int i = 1; i < maxQuestionNumber; i++) {
+            if (!answerNumbers.contains(i)) {
+                studentGradeInfoVO.setIfComplete("缺项");
+                break;
+            }
+        }
+
+
+        return GetStudentGradeInfoResponseDTO.builder()
+                .studentGradeInfoVOs(List.of(studentGradeInfoVO))
+                .maxAnswerNumber(maxQuestionNumber)
+                .build();
+    }
+
+    @Override
+    public List<Long> getStudentOriginalImageIds(long batchNumber, String studentId) {
+
+        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
+        Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
+        Set<OriginalImageInfo> originalImageInfosByStudentId = originalImageInfos
+                .stream()
+                .filter(originalImageInfo -> originalImageInfo.getStudentId().equals(studentId))
+                .collect(Collectors.toSet());
+        return originalImageInfosByStudentId.stream().map(OriginalImageInfo::getOriginalImagesInfoId).collect(Collectors.toList());
+    }
+
+    @Override
+    public Resource getOriginalImageResource(Long originalImageId) throws MalformedURLException {
+        String path = originalImageInfoRepository.findById(originalImageId).get().getPath();
+        Path file = Paths.get(path);
+        Resource resource = new UrlResource(file.toUri());
+        return resource;
+    }
+
+    @Override
+    public Set<ProcessedImageInfo> getStudentProcessedImageIds(long batchNumber, String studentId) {
+        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
+        Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
+        Set<OriginalImageInfo> originalImageInfosByStudentId = originalImageInfos
+                .stream()
+                .filter(originalImageInfo -> originalImageInfo.getStudentId().equals(studentId))
+                .collect(Collectors.toSet());
+        Set<ProcessedImageInfo> processedImageInfos = originalImageInfosByStudentId
+                .stream()
+                .flatMap(originalImageInfo -> originalImageInfo.getProcessedImageInfos().stream())
+                .collect(Collectors.toSet());
+        return processedImageInfos;
+    }
+
+    @Override
+    public Resource getProceesedImageResource(Long processedImageId) throws MalformedURLException {
+        String path = processedImageInfoRepository.findById(processedImageId).get().getPath();
+        Path file = Paths.get(path);
+        Resource resource = new UrlResource(file.toUri());
+        return resource;
+    }
+
+    @Override
+    public void updateScore(ProcessedImageInfo processedImageInfo, String username) {
+        processedImageInfoRepository.save(processedImageInfo);
     }
 
     private int getMaxQuestionNumber(ProjectInfo projectInfo) {
@@ -256,26 +349,25 @@ public class GradeServiceImpl implements GradeService {
     private void handleImages(long batchNumber) {
         logger.info("handleImages start");
         UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findUploadBatchInfoByBatchNumber(batchNumber);
-        Set<OriginalImagesInfo> originalImagesInfos = uploadBatchInfo.getOriginalImagesInfos();
+        Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
         ProjectInfo uploadBatchProjectInfo = uploadBatchInfo.getProjectInfo();
         AtomicInteger numOfSuccess = new AtomicInteger();
-
-        originalImagesInfos.forEach(originalImagesInfo -> {
+        originalImageInfos.forEach(originalImageInfo -> {
             try {
-                long indexOfSheets = parsingQRCode(originalImagesInfo, uploadBatchProjectInfo);
-                loadStudentInfoInOriginalImages(originalImagesInfo);
-                cuttingImages(originalImagesInfo, uploadBatchProjectInfo, indexOfSheets, uploadBatchInfo);
-                scoreImages(originalImagesInfo);
-                originalImagesInfo.setSuccessfulProcess(true);
+                long indexOfSheets = parsingQRCode(originalImageInfo, uploadBatchProjectInfo);
+                loadStudentInfoInOriginalImages(originalImageInfo);
+                cuttingImages(originalImageInfo, uploadBatchProjectInfo, indexOfSheets, uploadBatchInfo);
+                scoreImages(originalImageInfo);
+                originalImageInfo.setSuccessfulProcess(true);
                 numOfSuccess.getAndIncrement();
             } catch (HandleImagesException exception) {
-                originalImagesInfo.setSuccessfulProcess(false);
-                originalImagesInfo.setFailedReason(exception.getMessage());
+                originalImageInfo.setSuccessfulProcess(false);
+                originalImageInfo.setFailedReason(exception.getMessage());
                 logger.error(exception.getMessage());
             }
-            originalImagesInfoRepository.save(originalImagesInfo);
+//            originalImagesInfoRepository.save(originalImagesInfo);
         });
-        int numOfTotal = originalImagesInfos.size();
+        int numOfTotal = originalImageInfos.size();
         if (numOfSuccess.get() != numOfTotal) {
             uploadBatchInfo.setState("部分答题卡处理失败");
         } else {
@@ -286,19 +378,20 @@ public class GradeServiceImpl implements GradeService {
         uploadBatchRepository.save(uploadBatchInfo);
     }
 
-    private void scoreImages(OriginalImagesInfo originalImagesInfo) {
-        Set<ProcessedImagesInfo> processedImagesInfos = originalImagesInfo.getProcessedImagesInfos();
+    private void scoreImages(OriginalImageInfo originalImageInfo) {
+        Set<ProcessedImageInfo> processedImageInfos = originalImageInfo.getProcessedImageInfos();
         //todo
-        processedImagesInfos.forEach(processedImagesInfo -> {
+        processedImageInfos.forEach(processedImagesInfo -> {
             processedImagesInfo.setScore(new BigDecimal(10));
         });
+        originalImageInfo.setProcessedImageInfos(processedImageInfos);
     }
 
-    private void cuttingImages(OriginalImagesInfo originalImagesInfo, ProjectInfo projectInfo, long indexOfSheets, UploadBatchInfo uploadBatchInfo) throws HandleImagesException {
+    private void cuttingImages(OriginalImageInfo originalImageInfo, ProjectInfo projectInfo, long indexOfSheets, UploadBatchInfo uploadBatchInfo) throws HandleImagesException {
         String projectConfigPath = projectInfo.getPath();
 
-        String imagePath = originalImagesInfo.getPath();
-        Path path = Paths.get(processedImages, STR."\{uploadBatchInfo.getBatchNumber()}", STR."\{originalImagesInfo.getOriginalImagesInfoId()}");
+        String imagePath = originalImageInfo.getPath();
+        Path path = Paths.get(processedImages, STR."\{uploadBatchInfo.getBatchNumber()}", STR."\{originalImageInfo.getOriginalImagesInfoId()}");
 
         ProcessBuilder processBuilder =
                 new ProcessBuilder(pythonInterpreterPath, cuttingImagesPath, projectConfigPath, String.valueOf(indexOfSheets)
@@ -317,15 +410,15 @@ public class GradeServiceImpl implements GradeService {
                 while (matcher.find()) {
                     answerNumbers.add(Integer.parseInt(matcher.group()));
                 }
-                Set<ProcessedImagesInfo> processedImagesInfos = HashSet.newHashSet(answerNumbers.size());
+                Set<ProcessedImageInfo> processedImageInfos = HashSet.newHashSet(answerNumbers.size());
                 answerNumbers.forEach(number -> {
-                    ProcessedImagesInfo processedImagesInfo = ProcessedImagesInfo.builder()
+                    ProcessedImageInfo processedImageInfo = ProcessedImageInfo.builder()
                             .answerNumber(number)
                             .path(path + "\\" + number + ".png")
                             .build();
-                    processedImagesInfos.add(processedImagesInfo);
+                    processedImageInfos.add(processedImageInfo);
                 });
-                originalImagesInfo.setProcessedImagesInfos(processedImagesInfos);
+                originalImageInfo.setProcessedImageInfos(processedImageInfos);
             } else {
                 logPythonScriptError("cuttingImages", reader, exitCode);
                 throw new HandleImagesException("切割答题卡失败");
@@ -348,15 +441,15 @@ public class GradeServiceImpl implements GradeService {
     }
 
 
-    private void loadStudentInfoInOriginalImages(OriginalImagesInfo originalImagesInfo) {
+    private void loadStudentInfoInOriginalImages(OriginalImageInfo originalImageInfo) {
         //todo
-        originalImagesInfo.setStudentId("201180082");
-        originalImagesInfo.setStudentName("柯科");
-        originalImagesInfoRepository.save(originalImagesInfo);
+        originalImageInfo.setStudentId("201180082");
+        originalImageInfo.setStudentName("柯科");
+        originalImageInfoRepository.save(originalImageInfo);
     }
 
-    private long parsingQRCode(OriginalImagesInfo originalImagesInfo, ProjectInfo uploadBatchProjectInfo) throws HandleImagesException {
-        String QrCodeInfo = scanQrCode(originalImagesInfo.getPath());
+    private long parsingQRCode(OriginalImageInfo originalImageInfo, ProjectInfo uploadBatchProjectInfo) throws HandleImagesException {
+        String QrCodeInfo = scanQrCode(originalImageInfo.getPath());
         if (QrCodeInfo == null) {
             throw new HandleImagesException("无法正确解析二维码获取答题卡项目信息");
         }

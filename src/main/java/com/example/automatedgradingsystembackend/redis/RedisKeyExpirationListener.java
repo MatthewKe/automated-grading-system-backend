@@ -25,7 +25,7 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
         this.redisTemplate = redisTemplate;
     }
 
-  
+
     @Autowired
     ProjectInfoRepository projectInfoRepository;
 

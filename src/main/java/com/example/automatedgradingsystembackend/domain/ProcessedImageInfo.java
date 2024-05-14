@@ -13,11 +13,11 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Table(name = "PROCESSED_IMAGES_IFNO")
 @Builder
-public class ProcessedImagesInfo {
+public class ProcessedImageInfo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private long processedImagesInfoId;
+    private long processedImageInfoId;
 
     private String path;
 

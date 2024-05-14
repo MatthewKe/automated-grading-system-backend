@@ -31,7 +31,7 @@ public class UploadBatchInfo {
     private String state;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private Set<OriginalImagesInfo> originalImagesInfos = new HashSet<>();
+    private Set<OriginalImageInfo> originalImageInfos = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
     private UserInfo userInfo;
