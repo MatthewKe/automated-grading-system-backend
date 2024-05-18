@@ -1,12 +1,20 @@
 package com.example.automatedgradingsystembackend.controller;
 
+import com.example.automatedgradingsystembackend.domain.ProjectInfo;
 import com.example.automatedgradingsystembackend.dto.request.CommitProjectRequestDTO;
 import com.example.automatedgradingsystembackend.dto.response.CreateProjectResponseDTO;
 import com.example.automatedgradingsystembackend.dto.response.GetProjectConfigResponseDTO;
 import com.example.automatedgradingsystembackend.dto.response.ProduceOverviewResponseDTO;
+import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
+import com.example.automatedgradingsystembackend.repository.ProjectInfoRepository;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.ProduceService;
+import com.example.automatedgradingsystembackend.service.ProjectService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +29,10 @@ import org.springframework.web.bind.annotation.*;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Controller
@@ -37,7 +47,12 @@ public class ProduceController {
     @Autowired
     private ProduceService produceService;
 
+    @Autowired
+    private ProjectService projectService;
+
     private static final Logger logger = LoggerFactory.getLogger(ProduceController.class);
+    @Autowired
+    private ProjectInfoRepository projectInfoRepository;
 
     @GetMapping("/overview")
     public ResponseEntity<ProduceOverviewResponseDTO> overview(HttpServletRequest request) {
@@ -115,12 +130,16 @@ public class ProduceController {
         if (!produceService.testProjectIdMatchesUser(username, projectId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        String title = projectService.getProjectTitle(projectInfoRepository.findByProjectId(projectId));
+
         InputStream inputStream = produceService.download(jwtService.extractTokenFromHttpServletRequest(request), projectId);
         InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header("Content-Disposition", "attachment; filename=\"download.pdf\"")
+                .header("Content-Disposition", STR."attachment; filename=\"\{title}.pdf\"")
                 .body(inputStreamResource);
     }
+
 
 }

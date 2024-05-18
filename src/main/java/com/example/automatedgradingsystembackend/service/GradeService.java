@@ -29,5 +29,5 @@ public interface GradeService {
 
     Resource getProceesedImageResource(Long processedImageId) throws MalformedURLException;
 
-    void updateScore(ProcessedImageInfo processedImageInfo, String username);
+    void updateScore(ProcessedImageInfo processedImagesInfo, String username);
 }

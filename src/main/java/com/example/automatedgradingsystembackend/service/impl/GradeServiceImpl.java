@@ -6,6 +6,7 @@ import com.example.automatedgradingsystembackend.dto.response.GetStudentGradeInf
 import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
 import com.example.automatedgradingsystembackend.repository.*;
 import com.example.automatedgradingsystembackend.service.GradeService;
+import com.example.automatedgradingsystembackend.service.ProjectService;
 import com.example.automatedgradingsystembackend.vo.GradeOverviewVo;
 import com.example.automatedgradingsystembackend.vo.StudentGradeInfoVO;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,6 +38,7 @@ import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -78,6 +80,9 @@ public class GradeServiceImpl implements GradeService {
 
     @Value("${python.cuttingImages.path}")
     private String cuttingImagesPath;
+
+    @Autowired
+    ProjectService projectService;
 
 
     @Override
@@ -124,7 +129,7 @@ public class GradeServiceImpl implements GradeService {
                     .numOfUploadImages(uploadBatchInfo.getNumOfTotal())
                     .numOfSucceedProcessImages(uploadBatchInfo.getNumOfSuccess())
                     .state(uploadBatchInfo.getState())
-                    .title(getProjectTitle(uploadBatchInfo.getProjectInfo()))
+                    .title(projectService.getProjectTitle(uploadBatchInfo.getProjectInfo()))
                     .build();
             gradeOverviewVos.add(gradeOverviewVo);
         });
@@ -133,12 +138,29 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     public GetBatchGradeInfoResponseDTO getBatchGradeInfo(long batchNumber) {
+        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
+        Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
+
+        Set<GetBatchGradeInfoResponseDTO.FailedOriginalImageInfo> failedOriginalImageInfos = originalImageInfos.stream()
+                .filter(Predicate.not(OriginalImageInfo::isSuccessfulProcess))
+                .map(originalImageInfo -> GetBatchGradeInfoResponseDTO.FailedOriginalImageInfo.builder()
+                        .failedOriginalImageId(originalImageInfo.getOriginalImagesInfoId())
+                        .failedReason(originalImageInfo.getFailedReason())
+                        .build())
+                .collect(Collectors.toSet());
+
+
+        if (uploadBatchInfo.getProjectInfo() == null) {
+            return GetBatchGradeInfoResponseDTO.builder()
+                    .failedOriginalImageInfos(failedOriginalImageInfos)
+                    .build();
+        }
+
         List<StudentGradeInfoVO> studentGradeInfoVOS = new ArrayList<>();
 
-        UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
 
         Map<String, List<OriginalImageInfo>> originalImagesInfosMapByStudentId =
-                uploadBatchInfo.getOriginalImageInfos().stream().collect(Collectors.groupingBy(OriginalImageInfo::getStudentId));
+                uploadBatchInfo.getOriginalImageInfos().stream().filter(info -> info.getStudentId() != null).collect(Collectors.groupingBy(OriginalImageInfo::getStudentId));
 
         originalImagesInfosMapByStudentId.forEach((studentId, originalImagesInfos) -> {
 
@@ -174,12 +196,12 @@ public class GradeServiceImpl implements GradeService {
             }
         });
 
-        GetBatchGradeInfoResponseDTO getBatchGradeInfoResponseDTO = GetBatchGradeInfoResponseDTO
+        return GetBatchGradeInfoResponseDTO
                 .builder()
                 .studentGradeInfoVOs(studentGradeInfoVOS)
+                .failedOriginalImageInfos(failedOriginalImageInfos)
                 .maxAnswerNumber(maxQuestionNumber)
                 .build();
-        return getBatchGradeInfoResponseDTO;
     }
 
     @Override
@@ -298,31 +320,6 @@ public class GradeServiceImpl implements GradeService {
         return questionNumber;
     }
 
-    private String getProjectTitle(ProjectInfo projectInfo) {
-        String projectConfig = null;
-        String projectPath = projectInfo.getPath();
-        ProjectConfigForRedis projectConfigForRedis = redisTemplate.opsForValue()
-                .get(String.valueOf(projectInfo.getProjectId()));
-        if (projectConfigForRedis != null) {
-            projectConfig = projectConfigForRedis.getProjectConfig();
-        } else {
-            try {
-                projectConfig = FileUtils.readFileToString(new File(projectPath), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                logger.error(e.getMessage());
-            }
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = null;
-        try {
-            rootNode = objectMapper.readTree(projectConfig);
-        } catch (JsonProcessingException e) {
-            logger.error(e.getMessage());
-        }
-        String title = rootNode.get("title").asText();
-        return title;
-    }
-
 
     private boolean loadProjectInfoInUploadBatch(Path path, UploadBatchInfo uploadBatchInfo) {
         ProjectInfo projectInfo = null;
@@ -396,14 +393,14 @@ public class GradeServiceImpl implements GradeService {
         ProcessBuilder processBuilder =
                 new ProcessBuilder(pythonInterpreterPath, cuttingImagesPath, projectConfigPath, String.valueOf(indexOfSheets)
                         , imagePath, path.toString());
-        //processBuilder.redirectErrorStream(true);
+//        processBuilder.redirectErrorStream(true);
         try {
             Process process = processBuilder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             int exitCode = process.waitFor();
             if (exitCode == 0) {
                 String line = reader.readLine();
-
                 List<Integer> answerNumbers = new ArrayList<>();
                 Pattern pattern = Pattern.compile("\\d+");
                 Matcher matcher = pattern.matcher(line);
@@ -420,7 +417,7 @@ public class GradeServiceImpl implements GradeService {
                 });
                 originalImageInfo.setProcessedImageInfos(processedImageInfos);
             } else {
-                logPythonScriptError("cuttingImages", reader, exitCode);
+                logPythonScriptError("cuttingImages", errorReader, exitCode);
                 throw new HandleImagesException("切割答题卡失败");
             }
         } catch (IOException | InterruptedException e) {
