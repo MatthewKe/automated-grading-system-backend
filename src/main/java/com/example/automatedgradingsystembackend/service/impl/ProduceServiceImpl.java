@@ -119,7 +119,7 @@ public class ProduceServiceImpl implements ProduceService {
     }
 
     @Override
-    public boolean testProjectIdMatchesUser(String username, long projectId) {
+    public boolean userHasProjectAuthority(String username, long projectId) {
         ProjectInfo projectInfo = projectInfoRepository.findByProjectIdAndUserUsername(projectId, username);
         if (projectInfo == null) {
             return false;

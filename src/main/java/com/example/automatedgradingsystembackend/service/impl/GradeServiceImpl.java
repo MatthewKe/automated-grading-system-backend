@@ -22,7 +22,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -58,6 +61,7 @@ public class GradeServiceImpl implements GradeService {
     @Autowired
     ProcessedImageInfoRepository processedImageInfoRepository;
 
+
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
@@ -83,6 +87,9 @@ public class GradeServiceImpl implements GradeService {
 
     @Autowired
     ProjectService projectService;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
 
     @Override
@@ -140,7 +147,6 @@ public class GradeServiceImpl implements GradeService {
     public GetBatchGradeInfoResponseDTO getBatchGradeInfo(long batchNumber) {
         UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
         Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
-
         Set<GetBatchGradeInfoResponseDTO.FailedOriginalImageInfo> failedOriginalImageInfos = originalImageInfos.stream()
                 .filter(Predicate.not(OriginalImageInfo::isSuccessfulProcess))
                 .map(originalImageInfo -> GetBatchGradeInfoResponseDTO.FailedOriginalImageInfo.builder()
@@ -148,22 +154,15 @@ public class GradeServiceImpl implements GradeService {
                         .failedReason(originalImageInfo.getFailedReason())
                         .build())
                 .collect(Collectors.toSet());
-
-
         if (uploadBatchInfo.getProjectInfo() == null) {
             return GetBatchGradeInfoResponseDTO.builder()
                     .failedOriginalImageInfos(failedOriginalImageInfos)
                     .build();
         }
-
         List<StudentGradeInfoVO> studentGradeInfoVOS = new ArrayList<>();
-
-
         Map<String, List<OriginalImageInfo>> originalImagesInfosMapByStudentId =
                 uploadBatchInfo.getOriginalImageInfos().stream().filter(info -> info.getStudentId() != null).collect(Collectors.groupingBy(OriginalImageInfo::getStudentId));
-
         originalImagesInfosMapByStudentId.forEach((studentId, originalImagesInfos) -> {
-
             StudentGradeInfoVO studentGradeInfoVO = StudentGradeInfoVO.builder()
                     .studentId(studentId)
                     .studentName(originalImagesInfos.getFirst().getStudentName())
@@ -209,7 +208,10 @@ public class GradeServiceImpl implements GradeService {
         UploadBatchInfo uploadBatchInfo = uploadBatchRepository.findByBatchNumber(batchNumber);
 
         List<OriginalImageInfo> originalImageInfos =
-                uploadBatchInfo.getOriginalImageInfos().stream().collect(Collectors.groupingBy(OriginalImageInfo::getStudentId)).get(studentId);
+                uploadBatchInfo.getOriginalImageInfos().stream()
+                        .filter(info -> info.getStudentId() != null)
+                        .collect(Collectors.groupingBy(OriginalImageInfo::getStudentId))
+                        .get(studentId);
 
         Map<Integer, BigDecimal> scores = originalImageInfos.stream()
                 .flatMap(originalImageInfo -> originalImageInfo.getProcessedImageInfos().stream())
@@ -252,6 +254,7 @@ public class GradeServiceImpl implements GradeService {
         Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
         Set<OriginalImageInfo> originalImageInfosByStudentId = originalImageInfos
                 .stream()
+                .filter(originalImageInfo -> originalImageInfo.getStudentId() != null)
                 .filter(originalImageInfo -> originalImageInfo.getStudentId().equals(studentId))
                 .collect(Collectors.toSet());
         return originalImageInfosByStudentId.stream().map(OriginalImageInfo::getOriginalImagesInfoId).collect(Collectors.toList());
@@ -271,6 +274,7 @@ public class GradeServiceImpl implements GradeService {
         Set<OriginalImageInfo> originalImageInfos = uploadBatchInfo.getOriginalImageInfos();
         Set<OriginalImageInfo> originalImageInfosByStudentId = originalImageInfos
                 .stream()
+                .filter(originalImageInfo -> originalImageInfo.getStudentId() != null)
                 .filter(originalImageInfo -> originalImageInfo.getStudentId().equals(studentId))
                 .collect(Collectors.toSet());
         Set<ProcessedImageInfo> processedImageInfos = originalImageInfosByStudentId
@@ -362,7 +366,6 @@ public class GradeServiceImpl implements GradeService {
                 originalImageInfo.setFailedReason(exception.getMessage());
                 logger.error(exception.getMessage());
             }
-//            originalImagesInfoRepository.save(originalImagesInfo);
         });
         int numOfTotal = originalImageInfos.size();
         if (numOfSuccess.get() != numOfTotal) {
@@ -375,12 +378,10 @@ public class GradeServiceImpl implements GradeService {
         uploadBatchRepository.save(uploadBatchInfo);
     }
 
+
     private void scoreImages(OriginalImageInfo originalImageInfo) {
         Set<ProcessedImageInfo> processedImageInfos = originalImageInfo.getProcessedImageInfos();
-        //todo
-        processedImageInfos.forEach(processedImagesInfo -> {
-            processedImagesInfo.setScore(new BigDecimal(10));
-        });
+        processedImageInfos.forEach(processedImageInfo -> processedImageInfo.setScore(BigDecimal.ZERO));
         originalImageInfo.setProcessedImageInfos(processedImageInfos);
     }
 
@@ -393,7 +394,6 @@ public class GradeServiceImpl implements GradeService {
         ProcessBuilder processBuilder =
                 new ProcessBuilder(pythonInterpreterPath, cuttingImagesPath, projectConfigPath, String.valueOf(indexOfSheets)
                         , imagePath, path.toString());
-//        processBuilder.redirectErrorStream(true);
         try {
             Process process = processBuilder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));

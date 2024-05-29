@@ -169,7 +169,7 @@ def main():
     index_of_sheets = int(sys.argv[2])
     image_path = sys.argv[3]
     processed_images_path = sys.argv[4]
-    
+
     # 加载图像，并转换为灰度图和二值图
     image = cv.imread(image_path)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)

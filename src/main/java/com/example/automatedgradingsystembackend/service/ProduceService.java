@@ -13,7 +13,7 @@ public interface ProduceService {
 
     public String getProjectConfig(long projectId);
 
-    public boolean testProjectIdMatchesUser(String username, long projectId);
+    public boolean userHasProjectAuthority(String username, long projectId);
 
     public InputStream download(String jwt, long projectId);
 

@@ -1,20 +1,14 @@
 package com.example.automatedgradingsystembackend.controller;
 
-import com.example.automatedgradingsystembackend.domain.ProjectInfo;
 import com.example.automatedgradingsystembackend.dto.request.CommitProjectRequestDTO;
 import com.example.automatedgradingsystembackend.dto.response.CreateProjectResponseDTO;
 import com.example.automatedgradingsystembackend.dto.response.GetProjectConfigResponseDTO;
 import com.example.automatedgradingsystembackend.dto.response.ProduceOverviewResponseDTO;
-import com.example.automatedgradingsystembackend.redis.ProjectConfigForRedis;
 import com.example.automatedgradingsystembackend.repository.ProjectInfoRepository;
 import com.example.automatedgradingsystembackend.security.JwtService;
 import com.example.automatedgradingsystembackend.service.ProduceService;
 import com.example.automatedgradingsystembackend.service.ProjectService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Controller
@@ -100,7 +92,7 @@ public class ProduceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
-        if (!produceService.testProjectIdMatchesUser(username, commitProjectRequestDTO.getProjectId())) {
+        if (!produceService.userHasProjectAuthority(username, commitProjectRequestDTO.getProjectId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         produceService.commitProject(username, commitProjectRequestDTO.getProjectConfig(), commitProjectRequestDTO.getProjectId(), commitProjectRequestDTO.getTimestamp());
@@ -111,7 +103,7 @@ public class ProduceController {
     @GetMapping("/getProjectConfig")
     public ResponseEntity<GetProjectConfigResponseDTO> getProjectConfig(HttpServletRequest request, @RequestParam long projectId) {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
-        if (!produceService.testProjectIdMatchesUser(username, projectId)) {
+        if (!produceService.userHasProjectAuthority(username, projectId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         String projectConfig = produceService.getProjectConfig(projectId);
@@ -127,7 +119,7 @@ public class ProduceController {
     @GetMapping("/download")
     public ResponseEntity<InputStreamResource> download(HttpServletRequest request, @RequestParam long projectId) {
         String username = jwtService.extractUsernameFromHttpServletRequest(request);
-        if (!produceService.testProjectIdMatchesUser(username, projectId)) {
+        if (!produceService.userHasProjectAuthority(username, projectId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 

@@ -21,7 +21,6 @@ public class ProcessedImageInfo {
 
     private String path;
 
-
     private BigDecimal score;
 
     private int answerNumber;
